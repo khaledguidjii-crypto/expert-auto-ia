@@ -3,8 +3,6 @@ import json
 import re
 import os
 import cv2
-import tkinter as tk
-from tkinter import filedialog, messagebox
 from docxtpl import DocxTemplate, InlineImage
 from docx.shared import Mm
 from openai import OpenAI
@@ -76,6 +74,7 @@ def crop_text_zone(path):
 # ================= VIN =================
 
 def extract_vin_protocol(vin_grave_path, plaque_path, log):
+
     sources = [("VIN gravé", vin_grave_path), ("Plaque", plaque_path)]
 
     for name, path in sources:
@@ -122,6 +121,7 @@ def extract_vin_protocol(vin_grave_path, plaque_path, log):
 # ================= PLAQUE =================
 
 def extract_plaque_poids(plaque_path, log):
+
     if not plaque_path:
         return {}
 
@@ -203,41 +203,3 @@ def generate_report(cg_data, vin, poids, infos, imgs, log):
     doc.save(name)
 
     log(f"✔ Rapport généré : {name}")
-
-# ================= UI =================
-
-class App:
-    def __init__(self, root):
-        self.root = root
-        self.imgs = {"carte": None, "vin": None, "plaque": None, "vehicule": None}
-        self.entries = {}
-        self.ui()
-
-    def log(self, msg):
-        self.box.insert(tk.END, msg + "\n")
-
-    def ui(self):
-        for k in self.imgs:
-            tk.Button(self.root, text=f"Charger {k}", command=lambda x=k: self.load(x)).pack()
-
-        tk.Button(self.root, text="GENERER", command=self.run).pack()
-
-        self.box = tk.Text(self.root)
-        self.box.pack()
-
-    def load(self, k):
-        self.imgs[k] = filedialog.askopenfilename()
-
-    def run(self):
-        cg = extract_carte_grise_protocol(self.imgs["carte"], self.log)
-        vin = extract_vin_protocol(self.imgs["vin"], self.imgs["plaque"], self.log)
-        poids = extract_plaque_poids(self.imgs["plaque"], self.log)
-
-        generate_report(cg, vin, poids, {}, self.imgs, self.log)
-
-# ================= MAIN =================
-
-if __name__ == "__main__":
-    root = tk.Tk()
-    App(root)
-    root.mainloop()
