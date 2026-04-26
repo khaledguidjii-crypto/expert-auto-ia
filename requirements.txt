@@ -1,0 +1,6 @@
+flask
+openai
+docxtpl
+python-docx
+opencv-python
+gunicorn

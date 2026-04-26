@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Expert Auto IA</title>
+
+<style>
+body {
+    font-family: Arial;
+    background: #f4f6f9;
+    text-align: center;
+}
+
+.container {
+    width: 500px;
+    margin: auto;
+    background: white;
+    padding: 30px;
+    margin-top: 50px;
+    border-radius: 10px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+}
+
+h1 {
+    color: #333;
+}
+
+.file-input {
+    margin: 15px 0;
+    text-align: left;
+}
+
+input[type="file"] {
+    width: 100%;
+}
+
+.preview {
+    margin-top: 10px;
+    max-width: 100%;
+    height: auto;
+    display: none;
+    border-radius: 5px;
+}
+
+button {
+    background: #28a745;
+    color: white;
+    padding: 12px;
+    border: none;
+    width: 100%;
+    border-radius: 5px;
+    font-size: 16px;
+    cursor: pointer;
+}
+
+button:hover {
+    background: #218838;
+}
+
+.logo {
+    font-size: 22px;
+    font-weight: bold;
+    margin-bottom: 10px;
+}
+
+#loading {
+    display: none;
+    margin-top: 15px;
+    color: #007bff;
+}
+</style>
+
+</head>
+
+<body>
+
+<div class="container">
+
+<div class="logo">🚗 Expert Auto IA</div>
+<h1>Générer un rapport</h1>
+
+<form action="/upload" method="post" enctype="multipart/form-data">
+
+    <div class="file-input">
+        Carte grise :
+        <input type="file" name="carte" accept="image/*" capture="environment" required onchange="previewImage(event,'img1')">
+        <img id="img1" class="preview">
+    </div>
+
+    <div class="file-input">
+        VIN :
+        <input type="file" name="vin" accept="image/*" capture="environment" required onchange="previewImage(event,'img2')">
+        <img id="img2" class="preview">
+    </div>
+
+    <div class="file-input">
+        Plaque constructeur :
+        <input type="file" name="plaque" accept="image/*" capture="environment" required onchange="previewImage(event,'img3')">
+        <img id="img3" class="preview">
+    </div>
+
+    <div class="file-input">
+        Véhicule :
+        <input type="file" name="vehicule" accept="image/*" capture="environment" onchange="previewImage(event,'img4')">
+        <img id="img4" class="preview">
+    </div>
+
+    <button type="submit">⚡ Générer le rapport</button>
+
+    <p id="loading">⏳ Génération en cours...</p>
+
+</form>
+
+</div>
+
+<script>
+function previewImage(event, id) {
+    const img = document.getElementById(id);
+    img.src = URL.createObjectURL(event.target.files[0]);
+    img.style.display = "block";
+}
+
+document.querySelector("form").onsubmit = function() {
+    document.getElementById("loading").style.display = "block";
+}
+</script>
+
+</body>
+</html>
