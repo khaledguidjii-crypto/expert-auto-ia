@@ -2,6 +2,7 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Expert Auto IA</title>
 
 <style>
@@ -12,11 +13,12 @@ body {
 }
 
 .container {
-    width: 500px;
+    width: 95%;
+    max-width: 500px;
     margin: auto;
     background: white;
-    padding: 30px;
-    margin-top: 50px;
+    padding: 20px;
+    margin-top: 20px;
     border-radius: 10px;
     box-shadow: 0 0 10px rgba(0,0,0,0.1);
 }
@@ -32,12 +34,12 @@ h1 {
 
 input[type="file"] {
     width: 100%;
+    padding: 8px;
 }
 
 .preview {
     margin-top: 10px;
     max-width: 100%;
-    height: auto;
     display: none;
     border-radius: 5px;
 }
@@ -45,7 +47,7 @@ input[type="file"] {
 button {
     background: #28a745;
     color: white;
-    padding: 12px;
+    padding: 14px;
     border: none;
     width: 100%;
     border-radius: 5px;
@@ -69,7 +71,6 @@ button:hover {
     color: #007bff;
 }
 </style>
-
 </head>
 
 <body>
@@ -81,26 +82,30 @@ button:hover {
 
 <form action="/upload" method="post" enctype="multipart/form-data">
 
+    <!-- CARTE -->
     <div class="file-input">
-        Carte grise :
+        📄 Carte grise (photo ou galerie)
         <input type="file" name="carte" accept="image/*" capture="environment" required onchange="previewImage(event,'img1')">
         <img id="img1" class="preview">
     </div>
 
+    <!-- VIN -->
     <div class="file-input">
-        VIN :
+        🔢 VIN (photo ou galerie)
         <input type="file" name="vin" accept="image/*" capture="environment" required onchange="previewImage(event,'img2')">
         <img id="img2" class="preview">
     </div>
 
+    <!-- PLAQUE -->
     <div class="file-input">
-        Plaque constructeur :
+        🏷️ Plaque constructeur
         <input type="file" name="plaque" accept="image/*" capture="environment" required onchange="previewImage(event,'img3')">
         <img id="img3" class="preview">
     </div>
 
+    <!-- VEHICULE -->
     <div class="file-input">
-        Véhicule :
+        🚗 Photo véhicule (optionnel)
         <input type="file" name="vehicule" accept="image/*" capture="environment" onchange="previewImage(event,'img4')">
         <img id="img4" class="preview">
     </div>
