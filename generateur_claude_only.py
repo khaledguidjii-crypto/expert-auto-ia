@@ -3,93 +3,34 @@ import json
 import re
 import os
 import cv2
-from docxtpl import DocxTemplate, InlineImage
-from docx.shared import Mm
+from docxtpl import DocxTemplate
 from openai import OpenAI
 
-# 🔐 API depuis Render (ENV)
+# 🔐 API depuis Render
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
-# ================= IMAGE =================
+# ================= IMAGE LIGHT =================
 
 def compress_image(path):
     try:
         img = cv2.imread(path)
         if img is not None:
-            cv2.imwrite(path, img, [int(cv2.IMWRITE_JPEG_QUALITY), 70])
+            # 🔥 réduction forte pour éviter crash
+            img = cv2.resize(img, (800, 600))
+            cv2.imwrite(path, img, [int(cv2.IMWRITE_JPEG_QUALITY), 60])
     except:
         pass
-
-def preprocess_image(path):
-    try:
-        img = cv2.imread(path)
-        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-        gray = cv2.equalizeHist(gray)
-        cv2.imwrite(path, gray)
-    except:
-        pass
-
-def is_blurry(path):
-    try:
-        img = cv2.imread(path)
-        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-        return cv2.Laplacian(gray, cv2.CV_64F).var() < 100
-    except:
-        return False
-
-def crop_text_zone(path):
-    try:
-        img = cv2.imread(path)
-        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-
-        thresh = cv2.adaptiveThreshold(
-            gray, 255,
-            cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
-            cv2.THRESH_BINARY_INV,
-            11, 2
-        )
-
-        contours, _ = cv2.findContours(
-            thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE
-        )
-
-        boxes = []
-        for c in contours:
-            x, y, w, h = cv2.boundingRect(c)
-            if w > 100 and h > 30:
-                boxes.append((x, y, w, h))
-
-        if boxes:
-            x, y, w, h = max(boxes, key=lambda b: b[2]*b[3])
-            crop = img[y:y+h, x:x+w]
-            new_path = path.replace(".jpg", "_crop.jpg")
-            cv2.imwrite(new_path, crop)
-            return new_path
-
-    except:
-        pass
-
-    return path
 
 # ================= VIN =================
 
-def extract_vin_protocol(vin_grave_path, plaque_path, log):
+def extract_vin_protocol(vin_path, plaque_path, log):
 
-    sources = [("VIN gravé", vin_grave_path), ("Plaque", plaque_path)]
+    for path in [vin_path, plaque_path]:
 
-    for name, path in sources:
         if not path:
             continue
 
         compress_image(path)
-        preprocess_image(path)
-
-        if is_blurry(path):
-            log("⚠️ Image floue")
-
-        path = crop_text_zone(path)
-
-        log(f"🔍 VIN → {name}")
 
         try:
             with open(path, "rb") as f:
@@ -100,69 +41,28 @@ def extract_vin_protocol(vin_grave_path, plaque_path, log):
                 messages=[{
                     "role": "user",
                     "content": [
-                        {"type": "text", "text": "Retourne uniquement le VIN de 17 caractères"},
+                        {"type": "text", "text": "Donne uniquement un VIN de 17 caractères"},
                         {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{img}"}}
                     ]
                 }]
             )
 
-            raw = res.choices[0].message.content.strip()
-            clean = re.sub(r'[^A-Z0-9]', '', raw.upper())
+            txt = res.choices[0].message.content
+            vin = re.sub(r'[^A-Z0-9]', '', txt.upper())
 
-            if len(clean) == 17:
-                log(f"✅ VIN : {clean}")
-                return clean
+            if len(vin) == 17:
+                return vin
 
         except Exception as e:
-            log(f"❌ Erreur VIN : {e}")
+            log(f"Erreur VIN: {e}")
 
     return ""
 
-# ================= PLAQUE =================
-
-def extract_plaque_poids(plaque_path, log):
-
-    if not plaque_path:
-        return {}
-
-    compress_image(plaque_path)
-    preprocess_image(plaque_path)
-    plaque_path = crop_text_zone(plaque_path)
-
-    try:
-        with open(plaque_path, "rb") as f:
-            img = base64.b64encode(f.read()).decode()
-
-        res = client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[{
-                "role": "user",
-                "content": [
-                    {"type": "text", "text": 'Retourne {"ptac":"","ptra":""}'},
-                    {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{img}"}}
-                ]
-            }]
-        )
-
-        text = res.choices[0].message.content.replace("```", "")
-        data = json.loads(text)
-
-        return {
-            "ptac": re.sub(r'\D', '', data.get("ptac", "")),
-            "ptra": re.sub(r'\D', '', data.get("ptra", ""))
-        }
-
-    except Exception as e:
-        log(f"❌ Erreur plaque : {e}")
-        return {}
-
-# ================= CARTE GRISE =================
+# ================= CARTE =================
 
 def extract_carte_grise_protocol(path, log):
 
     compress_image(path)
-    preprocess_image(path)
-    path = crop_text_zone(path)
 
     try:
         with open(path, "rb") as f:
@@ -173,45 +73,41 @@ def extract_carte_grise_protocol(path, log):
             messages=[{
                 "role": "user",
                 "content": [
-                    {"type": "text", "text": "Retourne JSON carte grise"},
+                    {"type": "text", "text": "Retourne JSON simple carte grise"},
                     {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{img}"}}
                 ]
             }]
         )
 
-        text = res.choices[0].message.content.replace("```", "")
-        return json.loads(text)
+        txt = res.choices[0].message.content.replace("```", "")
+        return json.loads(txt)
 
     except Exception as e:
-        log(f"❌ Erreur carte grise : {e}")
+        log(f"Erreur carte: {e}")
         return {}
+
+# ================= PLAQUE =================
+
+def extract_plaque_poids(path, log):
+    return {}
 
 # ================= RAPPORT =================
 
-def generate_report(cg_data, vin, poids, infos, imgs, log):
+def generate_report(cg, vin, poids, infos, imgs, log):
 
-    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-    template_path = os.path.join(BASE_DIR, "modele.docx")
+    base = os.path.dirname(os.path.abspath(__file__))
+    template = os.path.join(base, "modele.docx")
 
-    if not os.path.exists(template_path):
-        raise Exception("modele.docx introuvable")
+    if not os.path.exists(template):
+        raise Exception("modele.docx manquant")
 
-    doc = DocxTemplate(template_path)
+    doc = DocxTemplate(template)
 
-    cg_data["vin_complet"] = vin if vin else "Non disponible"
+    cg["vin"] = vin
 
-    final = {**cg_data, **infos}
+    doc.render(cg)
 
-    for k, path in imgs.items():
-        if path and os.path.exists(path):
-            final[f"img_{k}"] = InlineImage(doc, path, height=Mm(45))
+    output = os.path.join(base, "rapport.docx")
+    doc.save(output)
 
-    name = f"rapport_{infos.get('num_rapport','X')}.docx"
-    output_path = os.path.join(BASE_DIR, name)
-
-    doc.render(final)
-    doc.save(output_path)
-
-    log(f"✔ Rapport généré : {output_path}")
-
-    return output_path
+    return output
