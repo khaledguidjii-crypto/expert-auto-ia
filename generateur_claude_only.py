@@ -6,11 +6,11 @@ import cv2
 from docxtpl import DocxTemplate, InlineImage
 from docx.shared import Mm
 from openai import OpenAI
-import config
 
-client = OpenAI(api_key=config.OPENAI_API_KEY)
+# 🔐 API depuis Render (ENV)
+client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
-# ================= IMAGE OPTIMISATION =================
+# ================= IMAGE =================
 
 def compress_image(path):
     try:
@@ -114,7 +114,7 @@ def extract_vin_protocol(vin_grave_path, plaque_path, log):
                 return clean
 
         except Exception as e:
-            log(f"⚠️ erreur {e}")
+            log(f"❌ Erreur VIN : {e}")
 
     return ""
 
@@ -152,7 +152,8 @@ def extract_plaque_poids(plaque_path, log):
             "ptra": re.sub(r'\D', '', data.get("ptra", ""))
         }
 
-    except:
+    except Exception as e:
+        log(f"❌ Erreur plaque : {e}")
         return {}
 
 # ================= CARTE GRISE =================
@@ -181,14 +182,21 @@ def extract_carte_grise_protocol(path, log):
         text = res.choices[0].message.content.replace("```", "")
         return json.loads(text)
 
-    except:
+    except Exception as e:
+        log(f"❌ Erreur carte grise : {e}")
         return {}
 
 # ================= RAPPORT =================
 
 def generate_report(cg_data, vin, poids, infos, imgs, log):
 
-    doc = DocxTemplate("modele.docx")
+    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+    template_path = os.path.join(BASE_DIR, "modele.docx")
+
+    if not os.path.exists(template_path):
+        raise Exception("modele.docx introuvable")
+
+    doc = DocxTemplate(template_path)
 
     cg_data["vin_complet"] = vin if vin else "Non disponible"
 
@@ -198,8 +206,12 @@ def generate_report(cg_data, vin, poids, infos, imgs, log):
         if path and os.path.exists(path):
             final[f"img_{k}"] = InlineImage(doc, path, height=Mm(45))
 
-    doc.render(final)
     name = f"rapport_{infos.get('num_rapport','X')}.docx"
-    doc.save(name)
+    output_path = os.path.join(BASE_DIR, name)
 
-    log(f"✔ Rapport généré : {name}")
+    doc.render(final)
+    doc.save(output_path)
+
+    log(f"✔ Rapport généré : {output_path}")
+
+    return output_path
